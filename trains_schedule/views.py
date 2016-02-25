@@ -1,0 +1,199 @@
+# coding=utf-8
+from django.shortcuts import render, get_object_or_404
+from django.http import HttpResponse
+from django.utils import timezone
+import datetime
+from .forms import ChooseRoute, RouteCreation
+from .models import Schedule, City, Train
+
+
+def index(request):
+    """
+    Отвечает за отображение информации на главной странице /shedule
+    """
+    latest_schedule_list = Schedule.objects.filter(departure_date__gte=timezone.now(),
+                                                   departure_date__lte=timezone.now() +
+                                                   datetime.timedelta(days=7)).order_by('departure_date')
+    context = {'latest_schedule_list': latest_schedule_list}
+    return render(request, 'trains_schedule/index.html', context)
+
+
+def detail(request, train_id):
+    """
+    Отвечает за отображение информации по конкретному маршруту /shedule/train2/
+    """
+    train = get_object_or_404(Schedule, pk=train_id)
+    return render(request, 'trains_schedule/detail.html', {'train': train})
+
+
+def result(request):
+    """
+    Отвечает за обработку информации введенной пользователем на странице shedule/new-train/,
+    создание нового маршрута на основе этой информации и вывода соответствующей
+    информации в случае успеха/неудачи
+    """
+    chosen_train = Train.objects.get(pk=request.POST['choose_train'])
+    chosen_departure_city = City.objects.get(pk=request.POST['departure_city'])
+    chosen_departure_time = '-'.join([request.POST['departure_time_0_year'],
+                                      request.POST['departure_time_0_month'],
+                                      request.POST['departure_time_0_day']]) + ' ' + \
+                            ':'.join([request.POST['departure_time_1_hour'],
+                                      request.POST['departure_time_1_minute'],
+                                      request.POST['departure_time_1_second']])
+
+    chosen_destination_city = City.objects.get(pk=request.POST['destination_city'])
+
+    chosen_arriving_time = '-'.join([request.POST['arriving_time_0_year'],
+                                     request.POST['arriving_time_0_month'],
+                                     request.POST['arriving_time_0_day']]) + ' ' + \
+                           ':'.join([request.POST['arriving_time_1_hour'],
+                                     request.POST['arriving_time_1_minute'],
+                                     request.POST['arriving_time_1_second']])
+
+    try:
+            date_check1 = datetime.datetime.strptime(chosen_arriving_time, '%Y-%m-%d %H:%M:%S')
+            date_check2 = datetime.datetime.strptime(chosen_departure_time, '%Y-%m-%d %H:%M:%S')
+    except ValueError:
+            return HttpResponse("Error: you have to provide a valid date. "
+                                "Return to the previous page and change the date input.")
+
+    new_route = Schedule(departure_city=chosen_departure_city,
+                         destination_city=chosen_destination_city,
+                         departure_date=chosen_departure_time,
+                         destination_date=chosen_arriving_time,
+                         train=chosen_train)
+    new_route.save()
+    response = "Successfully create a new route"
+    return HttpResponse(response)
+
+
+def new_train(request):
+    """
+    Отвечает за вывод форм для ввода пользовтелем информации по новому маршруту
+    на странице shedule/new-train/
+    """
+    form = RouteCreation()
+    context = {'form': form}
+    return render(request, 'trains_schedule/new_train.html', context)
+
+
+def weeks_schedule(request):
+    """
+    Отвечает за вывод форм для ввода пользовтелем информации о интересуемых
+    датах маршрута и города(опционально) на странице shedule/weeks-schedule/
+    передает информацию в schedule/weeks-schedule/view-routes/
+    """
+    time_now = timezone.now().strftime("%Y-%m-%d")
+    context = {'time_now': time_now}
+    return render(request, 'trains_schedule/weeks_shedule.html', context)
+
+
+def view_routes(request):
+    """
+    Отвечает за вывод информации по маршрутам за указанный срок/по указанному городу
+    получает информацию со страницы shedule/weeks-schedule/, результат выводит на
+    schedule/weeks-schedule/view-routes/
+    """
+    date_from = request.POST['date_from'] if request.POST['date_from'] else '1700-01-01'
+    date_to = request.POST['date_to'] if request.POST['date_to']else '8000-01-01'
+
+    schedule_list = Schedule.objects.filter(departure_date__gte=date_from,
+                                            departure_date__lte=date_to)
+    if request.POST['city_from']:
+        try:
+            city = City.objects.get(city_name=request.POST['city_from'])
+            schedule_list = schedule_list.filter(departure_city=city.id)
+        except City.DoesNotExist:
+            return HttpResponse("Error: you enter city name that is not in the base. "
+                                "Return to the previous page and enter another one")
+    context = {'schedule_list': schedule_list}
+    return render(request, 'trains_schedule/view_routes.html', context)
+
+
+def select_route(request):
+    """
+    Отвечает за вывод форм выбора маршрута для редактирования на странице
+    schedule/select-route/, так же на форме есть возможно указать следует ли
+    удалить маршрут, передает информацию /schedule/select-route/change-data/
+    """
+    avaluable_choices = [(route.id, route.display_name()) for route in Schedule.objects.all()]
+    form = ChooseRoute(choices=avaluable_choices)
+    context = {'form': form}
+    return render(request, 'trains_schedule/select_route.html', context)
+
+
+def change_data(request):
+    """
+    Отвечает за вывод формя для пользователя касательно внесения изменений в
+    указанный на странице schedule/select-route/ маршрут, если delete_route == Y
+    сразу удаляет маршрут и выводит соответствующее уведомление. Если delete_route != Y
+    выведет форму для ввода новой информации по маршруту. Передает информацию в
+    schedule/select-route/change-data/change-results
+    """
+    try:
+        route = Schedule.objects.get(pk=request.POST['choose_route'])
+        form = RouteCreation()
+        context = {'route': route, 'form': form}
+    except (KeyError, Schedule.DoesNotExist):
+        return HttpResponse("Error: you didn't select a route. Return to the previous page and choose one")
+
+    if 'delete_route' in request.POST and request.POST['delete_route'] == 'Y':
+        response = 'Successful delete route {}'.format(route.display_name())
+        route.delete()
+        return HttpResponse(response)
+
+    return render(request, 'trains_schedule/change_data.html', context)
+
+
+def change_results(request):
+    """
+    Обрабатывает информацию полученную со страницы schedule/select-route/change-data/
+    Вывод ошибку в случае ввода неверной даты, если все данные введены верно -
+    вносит изменения в маршрут выбранный на этапе schedule/select-route/,
+    сохраняет данные и выводит соответствующее уведомление
+    """
+
+    chosen_train = Train.objects.get(pk=request.POST['choose_train'])
+    chosen_departure_city = City.objects.get(pk=request.POST['departure_city'])
+    chosen_departure_time = '-'.join([request.POST['departure_time_0_year'],
+                                      request.POST['departure_time_0_month'],
+                                      request.POST['departure_time_0_day']]) + ' ' + \
+                            ':'.join([request.POST['departure_time_1_hour'],
+                                      request.POST['departure_time_1_minute'],
+                                      request.POST['departure_time_1_second']])
+
+    chosen_destination_city = City.objects.get(pk=request.POST['destination_city'])
+
+    chosen_arriving_time = '-'.join([request.POST['arriving_time_0_year'],
+                                     request.POST['arriving_time_0_month'],
+                                     request.POST['arriving_time_0_day']]) + ' ' + \
+                           ':'.join([request.POST['arriving_time_1_hour'],
+                                     request.POST['arriving_time_1_minute'],
+                                     request.POST['arriving_time_1_second']])
+
+    try:
+            date_check1 = datetime.datetime.strptime(chosen_arriving_time,'%Y-%m-%d %H:%M:%S')
+            date_check2 = datetime.datetime.strptime(chosen_departure_time,'%Y-%m-%d %H:%M:%S')
+    except ValueError:
+            return HttpResponse("Error: you have to provide valid date. "
+                                "Return to the previous page and change the input.")
+
+    new_route = Schedule(id=request.POST['Route id'],
+                         departure_city=chosen_departure_city,
+                         destination_city=chosen_destination_city,
+                         departure_date=chosen_departure_time,
+                         destination_date=chosen_arriving_time,
+                         train=chosen_train)
+    new_route.save()
+    response = "Successfully change the route"
+    return HttpResponse(response)
+
+
+def all_route(request):
+    """
+    Отвечает за вывод информации о всех маршрутах на странице schedule/all-route/
+    Маршруты выводятся отсортированные по даты отправления
+    """
+    schedule_list = Schedule.objects.all().order_by('departure_date')
+    context = {'schedule_list': schedule_list}
+    return render(request, 'trains_schedule/schedule_all.html', context)

@@ -1,0 +1,21 @@
+{% load staticfiles %}
+
+<a href="{% url 'new_train' %}">Add a new train route</a>
+<br>
+<a href="{% url 'select_route' %}">Change or delete a train route</a>
+<br>
+<a href="{% url 'all_route' %}">List of all train routes</a>
+
+
+<h3>{{ "List of trains for current week" }}</h3>
+{% if latest_schedule_list %}
+    <ul>
+    {% for train_route in latest_schedule_list %}
+        <li><a href="{% url 'detail' train_route.id %}">{{ train_route.display_name }}</a></li>
+    {% endfor %}
+    </ul>
+{% else %}
+    <p>No schedule are available.</p>
+{% endif %}
+
+<a href="{% url 'weeks_schedule' %}">Schedule for another week</a>

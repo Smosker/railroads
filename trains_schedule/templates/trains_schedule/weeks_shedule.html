@@ -1,0 +1,17 @@
+<h3>{{ "List of all train routes by weeks" }}</h3>
+
+<h5>{{ "Enter required period for destination date in fields below." }}</h5>
+
+<form action="view-routes/" method="post">
+    {% csrf_token %}
+    <label for="date_from">Date from: </label>
+    <input id="date_from" type="text" name="date_from" value="{{ time_now }}">
+
+    <label for="date_to">Date to: </label>
+    <input id="date_to" type="text" name="date_to" value="{{ time_now }}">
+
+    <label for="city_from">City from (optional): </label>
+    <input id="city_from" type="text" name="city_from" >
+
+    <input type="submit" value="View routes">
+</form>

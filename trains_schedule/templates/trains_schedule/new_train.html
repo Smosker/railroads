@@ -1,0 +1,8 @@
+<h3>{{ "Add a new route" }}</h3>
+
+<form action="result/" method="post">
+    {% csrf_token %}
+    {{ form.as_ul }}
+<br>
+    <input type="submit" value="Create a route">
+</form>

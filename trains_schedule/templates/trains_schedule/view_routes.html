@@ -1,0 +1,11 @@
+<h3>{{ "List of all train routes by weeks" }}</h3>
+
+{% if schedule_list %}
+    <ul>
+    {% for train_route in schedule_list %}
+        <li><a href="{% url 'detail' train_route.id %}">{{ train_route.display_name }}</a></li>
+    {% endfor %}
+    </ul>
+{% else %}
+    <p>No schedule are available.</p>
+{% endif %}
