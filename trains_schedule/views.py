@@ -98,7 +98,7 @@ def view_routes(request):
     date_to = request.POST['date_to'] if request.POST['date_to']else '8000-01-01'
 
     schedule_list = Schedule.objects.filter(departure_date__gte=date_from,
-                                            departure_date__lte=date_to)
+                                            departure_date__lte=date_to).order_by('departure_date')
     if request.POST['city_from']:
         try:
             city = City.objects.get(city_name=request.POST['city_from'])
@@ -116,7 +116,9 @@ def select_route(request):
     schedule/select-route/, так же на форме есть возможно указать следует ли
     удалить маршрут, передает информацию /schedule/select-route/change-data/
     """
-    avaluable_choices = [(route.id, route.display_name()) for route in Schedule.objects.all()]
+    avaluable_choices = [(route.id, route.display_name()) for route in Schedule.objects.all().order_by('departure_date')]
+    if not avaluable_choices:
+        return HttpResponse("No route to display, you should add route first")
     form = ChooseRoute(choices=avaluable_choices)
     context = {'form': form}
     return render(request, 'trains_schedule/select_route.html', context)
