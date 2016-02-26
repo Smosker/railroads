@@ -7,6 +7,45 @@ from .forms import ChooseRoute, RouteCreation
 from .models import Schedule, City, Train
 
 
+def check_input(info):
+    """
+    Разбирает информацию полученную от пользователя для изменения/добавления маршрута
+    """
+    chosen_train = Train.objects.get(pk=info['choose_train'])
+    chosen_departure_city = City.objects.get(pk=info['departure_city'])
+    chosen_departure_time = '-'.join([info['departure_time_0_year'],
+                                      info['departure_time_0_month'],
+                                      info['departure_time_0_day']]) + ' ' + \
+                            ':'.join([info['departure_time_1_hour'],
+                                      info['departure_time_1_minute'],
+                                      info['departure_time_1_second']])
+
+    chosen_destination_city = City.objects.get(pk=info['destination_city'])
+
+    chosen_arriving_time = '-'.join([info['arriving_time_0_year'],
+                                     info['arriving_time_0_month'],
+                                     info['arriving_time_0_day']]) + ' ' + \
+                           ':'.join([info['arriving_time_1_hour'],
+                                     info['arriving_time_1_minute'],
+                                     info['arriving_time_1_second']])
+    return chosen_train, chosen_departure_city, chosen_departure_time,\
+           chosen_destination_city, chosen_arriving_time
+
+
+def check_time(departure_date, arriving_date):
+    """
+    Функция выполняет проверку корректности данных о времени отправления и прибытия,
+    введенных пользователем. Если данные не корректны возвращает соответствующую ошибку.
+    """
+    try:
+            date_check1 = datetime.datetime.strptime(arriving_date, '%Y-%m-%d %H:%M:%S')
+            date_check2 = datetime.datetime.strptime(departure_date, '%Y-%m-%d %H:%M:%S')
+            if date_check1 <= date_check2:
+                return HttpResponse("Error: date of arrival should be after date of departure")
+    except ValueError:
+            return HttpResponse("Error: you have to provide a valid date. "
+                                "Return to the previous page and change the date input.")
+
 def index(request):
     """
     Отвечает за отображение информации на главной странице /shedule
@@ -32,30 +71,11 @@ def result(request):
     создание нового маршрута на основе этой информации и вывода соответствующей
     информации в случае успеха/неудачи
     """
-    chosen_train = Train.objects.get(pk=request.POST['choose_train'])
-    chosen_departure_city = City.objects.get(pk=request.POST['departure_city'])
-    chosen_departure_time = '-'.join([request.POST['departure_time_0_year'],
-                                      request.POST['departure_time_0_month'],
-                                      request.POST['departure_time_0_day']]) + ' ' + \
-                            ':'.join([request.POST['departure_time_1_hour'],
-                                      request.POST['departure_time_1_minute'],
-                                      request.POST['departure_time_1_second']])
+    chosen_train, chosen_departure_city, chosen_departure_time,\
+    chosen_destination_city, chosen_arriving_time = check_input(request.POST)
 
-    chosen_destination_city = City.objects.get(pk=request.POST['destination_city'])
-
-    chosen_arriving_time = '-'.join([request.POST['arriving_time_0_year'],
-                                     request.POST['arriving_time_0_month'],
-                                     request.POST['arriving_time_0_day']]) + ' ' + \
-                           ':'.join([request.POST['arriving_time_1_hour'],
-                                     request.POST['arriving_time_1_minute'],
-                                     request.POST['arriving_time_1_second']])
-
-    try:
-            date_check1 = datetime.datetime.strptime(chosen_arriving_time, '%Y-%m-%d %H:%M:%S')
-            date_check2 = datetime.datetime.strptime(chosen_departure_time, '%Y-%m-%d %H:%M:%S')
-    except ValueError:
-            return HttpResponse("Error: you have to provide a valid date. "
-                                "Return to the previous page and change the date input.")
+    if check_time(chosen_departure_time, chosen_arriving_time):
+        return check_time(chosen_departure_time, chosen_arriving_time)
 
     new_route = Schedule(departure_city=chosen_departure_city,
                          destination_city=chosen_destination_city,
@@ -137,7 +157,8 @@ def change_data(request):
         form = RouteCreation()
         context = {'route': route, 'form': form}
     except (KeyError, Schedule.DoesNotExist):
-        return HttpResponse("Error: you didn't select a route. Return to the previous page and choose one")
+        return HttpResponse("Error: you didn't select a route. "
+                            "Return to the previous page and choose one")
 
     if 'delete_route' in request.POST and request.POST['delete_route'] == 'Y':
         response = 'Successful delete route {}'.format(route.display_name())
@@ -155,30 +176,11 @@ def change_results(request):
     сохраняет данные и выводит соответствующее уведомление
     """
 
-    chosen_train = Train.objects.get(pk=request.POST['choose_train'])
-    chosen_departure_city = City.objects.get(pk=request.POST['departure_city'])
-    chosen_departure_time = '-'.join([request.POST['departure_time_0_year'],
-                                      request.POST['departure_time_0_month'],
-                                      request.POST['departure_time_0_day']]) + ' ' + \
-                            ':'.join([request.POST['departure_time_1_hour'],
-                                      request.POST['departure_time_1_minute'],
-                                      request.POST['departure_time_1_second']])
+    chosen_train, chosen_departure_city, chosen_departure_time,\
+    chosen_destination_city, chosen_arriving_time = check_input(request.POST)
 
-    chosen_destination_city = City.objects.get(pk=request.POST['destination_city'])
-
-    chosen_arriving_time = '-'.join([request.POST['arriving_time_0_year'],
-                                     request.POST['arriving_time_0_month'],
-                                     request.POST['arriving_time_0_day']]) + ' ' + \
-                           ':'.join([request.POST['arriving_time_1_hour'],
-                                     request.POST['arriving_time_1_minute'],
-                                     request.POST['arriving_time_1_second']])
-
-    try:
-            date_check1 = datetime.datetime.strptime(chosen_arriving_time,'%Y-%m-%d %H:%M:%S')
-            date_check2 = datetime.datetime.strptime(chosen_departure_time,'%Y-%m-%d %H:%M:%S')
-    except ValueError:
-            return HttpResponse("Error: you have to provide valid date. "
-                                "Return to the previous page and change the input.")
+    if check_time(chosen_departure_time, chosen_arriving_time):
+        return check_time(chosen_departure_time, chosen_arriving_time)
 
     new_route = Schedule(id=request.POST['Route id'],
                          departure_city=chosen_departure_city,
