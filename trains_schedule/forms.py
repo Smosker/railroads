@@ -1,6 +1,6 @@
 #coding=utf-8
 from django import forms
-from .models import Train, City
+from .models import Train, City, Schedule
 import re
 from django.forms.extras.widgets import SelectDateWidget
 from django.forms.widgets import Widget, Select, MultiWidget
@@ -192,7 +192,7 @@ class SplitSelectDateTimeWidget(MultiWidget):
         rendered_widgets.insert(-1, '<br/>')
         return u''.join(rendered_widgets)
 
-
+"""
 class RouteCreation(forms.Form):
     '''
     Класс используется при создании нового маршрута/редактировании старого, для выбора параметров
@@ -213,7 +213,17 @@ class RouteCreation(forms.Form):
         widget=forms.Select, choices=[(city.id, city.city_name) for city in cities])
 
     arriving_time = forms.DateField(widget=SplitSelectDateTimeWidget)
+"""
 
+
+class RouteCreation(forms.ModelForm):
+    class Meta:
+        model = Schedule
+        fields = ('departure_city',
+    'destination_city',
+    'departure_date',
+    'destination_date',
+    'train')
 
 class ChooseRoute(forms.Form):
     '''
