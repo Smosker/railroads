@@ -1,7 +1,8 @@
 # coding=utf-8
-from django.shortcuts import render, get_object_or_404
+from django.shortcuts import render, get_object_or_404, redirect
 from django.http import HttpResponse
 from django.utils import timezone
+
 import datetime
 from .forms import ChooseRoute, RouteCreation
 from .models import Schedule, City, Train
@@ -66,36 +67,23 @@ def detail(request, train_id):
     return render(request, 'trains_schedule/detail.html', {'train': train})
 
 
-def result(request):
-    """
-    Отвечает за обработку информации введенной пользователем на странице shedule/new-train/,
-    создание нового маршрута на основе этой информации и вывода соответствующей
-    информации в случае успеха/неудачи
-    """
-    chosen_train, chosen_departure_city, chosen_departure_time, \
-    chosen_destination_city, chosen_arriving_time = check_input(request.POST)
-
-    if check_time(chosen_departure_time, chosen_arriving_time):
-        return check_time(chosen_departure_time, chosen_arriving_time)
-
-    new_route = Schedule(departure_city=chosen_departure_city,
-                         destination_city=chosen_destination_city,
-                         departure_date=chosen_departure_time,
-                         destination_date=chosen_arriving_time,
-                         train=chosen_train)
-    new_route.save()
-    response = "Successfully create a new route"
-    return HttpResponse(response)
-
-
 def new_train(request):
     """
     Отвечает за вывод форм для ввода пользовтелем информации по новому маршруту
     на странице shedule/new-train/
     """
-    form = RouteCreation()
-    context = {'form': form}
-    return render(request, 'trains_schedule/new_train.html', context)
+    if request.method == 'POST':
+        form = RouteCreation(request.POST)
+        if form.is_valid():
+            route = form.save()
+            return redirect('/schedule/train{}'.format(route.id))
+        else:
+            return HttpResponse("Error: you enter incorrect value")
+
+    else:
+        form = RouteCreation()
+        context = {'form': form}
+        return render(request, 'trains_schedule/new_train.html', context)
 
 
 def weeks_schedule(request):
@@ -104,31 +92,36 @@ def weeks_schedule(request):
     датах маршрута и города(опционально) на странице shedule/weeks-schedule/
     передает информацию в schedule/weeks-schedule/view-routes/
     """
-    time_now = timezone.now().strftime("%Y-%m-%d")
-    context = {'time_now': time_now}
-    return render(request, 'trains_schedule/weeks_shedule.html', context)
-
-
-def view_routes(request):
-    """
-    Отвечает за вывод информации по маршрутам за указанный срок/по указанному городу
-    получает информацию со страницы shedule/weeks-schedule/, результат выводит на
-    schedule/weeks-schedule/view-routes/
-    """
-    date_from = request.POST['date_from'] if request.POST['date_from'] else '1700-01-01'
-    date_to = request.POST['date_to'] if request.POST['date_to']else '8000-01-01'
-
-    schedule_list = Schedule.objects.filter(departure_date__gte=date_from,
-                                            departure_date__lte=date_to).order_by('departure_date')
-    if request.POST['city_from']:
+    if request.method == 'POST':
+        date_from = request.POST['date_from'] if request.POST['date_from'] else '1700-01-01 00:00'
+        date_to = request.POST['date_to'] if request.POST['date_to']else '8000-01-01 23:59'
         try:
-            city = City.objects.get(city_name=request.POST['city_from'])
-            schedule_list = schedule_list.filter(departure_city=city.id)
-        except City.DoesNotExist:
-            return HttpResponse("Error: you enter city name that is not in the base. "
-                                "Return to the previous page and enter another one")
-    context = {'schedule_list': schedule_list}
-    return render(request, 'trains_schedule/view_routes.html', context)
+            date_check1 = datetime.datetime.strptime(date_from, '%Y-%m-%d %H:%M')
+            date_check2 = datetime.datetime.strptime(date_to, '%Y-%m-%d %H:%M')
+            if date_check1 > date_check2:
+                return HttpResponse("Error: date of arrival should be after date of departure")
+        except ValueError:
+            return HttpResponse("Error: you have to provide a valid date. "
+                            "Return to the previous page and change the date input.")
+
+        schedule_list = Schedule.objects.filter(departure_date__gte=date_from,
+                                            departure_date__lte=date_to).order_by('departure_date')
+
+        context = {'schedule_list': schedule_list, 'date_from':request.POST['date_from'], 'date_to':request.POST['date_to']}
+        if request.POST['city_from']:
+            try:
+                city = City.objects.get(city_name=request.POST['city_from'])
+                schedule_list = schedule_list.filter(departure_city=city.id)
+            except City.DoesNotExist:
+                return HttpResponse("Error: you enter city name that is not in the base. "
+                                    "Return to the previous page and enter another one")
+            context['schedule_list'] = schedule_list
+            context['city_from'] = request.POST['city_from']
+
+    else:
+        time_now = timezone.now().strftime("%Y-%m-%d %H:%M")
+        context = {'time_now': time_now}
+    return render(request, 'trains_schedule/weeks_shedule.html', context)
 
 
 def select_route(request):

@@ -2,16 +2,27 @@
 
 <h5>{{ "Enter required period for destination date in fields below." }}</h5>
 
-<form action="view-routes/" method="post">
+<form method="post">
     {% csrf_token %}
     <label for="date_from">Date from: </label>
-    <input id="date_from" type="text" name="date_from" value="{{ time_now }}">
+    <input id="date_from" type="text" name="date_from" value="{{ time_now }}{{ date_from }}">
 
     <label for="date_to">Date to: </label>
-    <input id="date_to" type="text" name="date_to" value="{{ time_now }}">
+    <input id="date_to" type="text" name="date_to" value="{{ date_to }}">
 
     <label for="city_from">City from (optional): </label>
-    <input id="city_from" type="text" name="city_from" >
+    <input id="city_from" type="text" name="city_from" value="{{ city_from }}">
 
     <input type="submit" value="View routes">
 </form>
+
+
+    {% if schedule_list %}
+        <ul>
+        {% for train_route in schedule_list %}
+            <li><a href="{% url 'detail' train_route.id %}">{{ train_route.display_name }}</a></li>
+        {% endfor %}
+        </ul>
+    {% else %}
+        <p>No schedule are available.</p>
+    {% endif %}
