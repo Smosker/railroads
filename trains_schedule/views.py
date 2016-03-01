@@ -63,8 +63,34 @@ def detail(request, train_id):
     """
     Отвечает за отображение информации по конкретному маршруту /shedule/train2/
     """
-    train = get_object_or_404(Schedule, pk=train_id)
-    return render(request, 'trains_schedule/detail.html', {'train': train})
+    route = get_object_or_404(Schedule, pk=train_id)
+    if request.method == 'POST':
+
+        if request.POST['action'] == 'Delete':
+            response = 'Successful delete route {}'.format(route.display_name())
+            route.delete()
+            return HttpResponse(response)
+
+        elif request.POST['action'] == 'Change':
+            initial_data = {'departure_city': route.departure_city,
+                            'destination_city': route.destination_city,
+                            'departure_date':route.departure_date,
+                            'destination_date':route.destination_date,
+                            'train':route.train}
+
+            form = RouteCreation(initial=initial_data)
+            context = {'train': route, 'form': form}
+
+        elif request.POST['action'] == 'Save':
+            form = RouteCreation(request.POST, instance=route)
+            if form.is_valid():
+                route = form.save()
+                return redirect('/schedule/train{}'.format(route.id))
+            else:
+                return HttpResponse("Error: you enter incorrect value")
+    else:
+        context = {'train': route}
+    return render(request, 'trains_schedule/detail.html', context)
 
 
 def new_train(request):
@@ -81,7 +107,7 @@ def new_train(request):
             return HttpResponse("Error: you enter incorrect value")
 
     else:
-        form = RouteCreation()
+        form = RouteCreation(initial={'departure_date': '2016-03-01 12:43','destination_date': '2016-03-01 12:43'})
         context = {'form': form}
         return render(request, 'trains_schedule/new_train.html', context)
 

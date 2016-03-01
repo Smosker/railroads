@@ -5,3 +5,26 @@
 
 <h3>{{ "Train info" }}</h3>
 {{train.display_train_info}}
+
+<br>
+<form  method="post">
+    {% csrf_token %}
+    <input id="action_id" type="hidden" name="action" value="Delete">
+    <input type="submit" value="Delete" />
+</form>
+
+<form  method="post">
+    {% csrf_token %}
+    <input id="action_id" type="hidden" name="action" value="Change">
+    <input type="submit" value="Change data" />
+</form>
+
+
+<form  method="post">
+    {% csrf_token %}
+    {{ form.as_ul }}
+    <input id="action_id" type="hidden" name="action" value="Save">
+    <input type="submit" value="Save changes" />
+</form>
+
+
