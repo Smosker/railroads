@@ -45,8 +45,8 @@ def detail(request, train_id):
         elif request.POST['action'] == 'Change':
             initial_data = {'departure_city': route.departure_city,
                             'destination_city': route.destination_city,
-                            'departure_date':  route.departure_date,
-                            'destination_date': route.destination_date,
+                            'departure_date':  route.departure_date.strftime('%Y-%m-%d %H:%M'),
+                            'destination_date': route.destination_date.strftime('%Y-%m-%d %H:%M'),
                             'train': route.train}
 
             form = RouteCreation(initial=initial_data)
