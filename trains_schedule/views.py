@@ -8,6 +8,12 @@ from .models import Schedule, City
 
 
 def check_time(departure_date, arriving_date):
+    """
+    Функция для проверки корректности ввода даты и времени
+    Используется в views.detail при изменении маршрута и
+    в views.new_train при создании маршрута
+    По заложенной функциональности дата отправления не должна быть больше даты прибытия
+    """
     try:
         date_check1 = datetime.datetime.strptime(departure_date, '%Y-%m-%d %H:%M')
         date_check2 = datetime.datetime.strptime(arriving_date, '%Y-%m-%d %H:%M')
@@ -32,7 +38,7 @@ def index(request):
 def detail(request, train_id):
     """
     Отвечает за отображение информации по конкретному маршруту /shedule/train2/
-    Так же дает возможность изменить или удалить маршрут
+    Так же дает возможность изменить или удалить маршрут.
     """
     route = get_object_or_404(Schedule, pk=train_id)
     if request.method == 'POST':
@@ -54,6 +60,7 @@ def detail(request, train_id):
 
         elif request.POST['action'] == 'Save':
             form = RouteCreation(request.POST, instance=route)
+
             if form.is_valid():
                 if check_time(request.POST['departure_date'], request.POST['destination_date']):
                     return check_time(request.POST['departure_date'], request.POST['destination_date'])
@@ -83,7 +90,8 @@ def new_train(request):
             return HttpResponse("Error: you enter incorrect value")
 
     else:
-        form = RouteCreation(initial={'departure_date': '2016-03-01 12:43', 'destination_date': '2016-03-01 12:43'})
+        form = RouteCreation(initial={'departure_date': timezone.now().strftime('%Y-%m-%d %H:%M'),
+                                      'destination_date': timezone.now().strftime('%Y-%m-%d %H:%M')})
         context = {'form': form}
         return render(request, 'trains_schedule/new_train.html', context)
 
