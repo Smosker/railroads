@@ -1,3 +1,6 @@
+{% extends 'trains_schedule/base.html' %}
+{% block content %}
+
 <h3>{{ "List of all train routes by weeks" }}</h3>
 
 <h5>{{ "Enter required period for destination date in fields below." }}</h5>
@@ -26,3 +29,5 @@
     {% else %}
         <p>No schedule are available.</p>
     {% endif %}
+
+{% endblock content %}

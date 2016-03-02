@@ -1,3 +1,6 @@
+{% extends 'trains_schedule/base.html' %}
+{% block content %}
+
 <h3>{{ "List of all train routes" }}</h3>
 {% if schedule_list %}
     <ul>
@@ -8,3 +11,5 @@
 {% else %}
     <p>No schedule are available.</p>
 {% endif %}
+
+{% endblock content %}
