@@ -1,9 +1,12 @@
 h1  {
-        color: #FCA205;
+        color: #2F78CC;
         font-family: 'Oswald';
     }
+a {
+    color: #1376E8;
+    }
 h3  {
-        color: #FCA205;
+        color: #2F78CC;
         font-family: 'Oswald';
     }
 .text_style {
@@ -15,7 +18,7 @@ h3  {
     }
 
 .page-header {
-        background-color: #ff9400;
+        background-color: #2F78CC;
         margin-top: 0;
         padding: 20px 20px 20px 40px;
     }
