@@ -7,6 +7,17 @@ from .forms import RouteCreation
 from .models import Schedule, City
 
 
+def check_time(departure_date, arriving_date):
+    try:
+        date_check1 = datetime.datetime.strptime(departure_date, '%Y-%m-%d %H:%M')
+        date_check2 = datetime.datetime.strptime(arriving_date, '%Y-%m-%d %H:%M')
+        if date_check1 > date_check2:
+                return HttpResponse("Error: date of arrival should be after date of departure")
+    except ValueError:
+            return HttpResponse("Error: you have to provide a valid date. "
+                                "Return to the previous page and change the date input.")
+
+
 def index(request):
     """
     Отвечает за отображение информации на главной странице /shedule
@@ -34,9 +45,9 @@ def detail(request, train_id):
         elif request.POST['action'] == 'Change':
             initial_data = {'departure_city': route.departure_city,
                             'destination_city': route.destination_city,
-                            'departure_date':route.departure_date,
-                            'destination_date':route.destination_date,
-                            'train':route.train}
+                            'departure_date':  route.departure_date,
+                            'destination_date': route.destination_date,
+                            'train': route.train}
 
             form = RouteCreation(initial=initial_data)
             context = {'train': route, 'form': form}
@@ -44,6 +55,8 @@ def detail(request, train_id):
         elif request.POST['action'] == 'Save':
             form = RouteCreation(request.POST, instance=route)
             if form.is_valid():
+                if check_time(request.POST['departure_date'], request.POST['destination_date']):
+                    return check_time(request.POST['departure_date'], request.POST['destination_date'])
                 route = form.save()
                 return redirect('/schedule/train{}'.format(route.id))
             else:
@@ -62,13 +75,15 @@ def new_train(request):
     if request.method == 'POST':
         form = RouteCreation(request.POST)
         if form.is_valid():
+            if check_time(request.POST['departure_date'], request.POST['destination_date']):
+                return check_time(request.POST['departure_date'], request.POST['destination_date'])
             route = form.save()
             return redirect('/schedule/train{}'.format(route.id))
         else:
             return HttpResponse("Error: you enter incorrect value")
 
     else:
-        form = RouteCreation(initial={'departure_date': '2016-03-01 12:43','destination_date': '2016-03-01 12:43'})
+        form = RouteCreation(initial={'departure_date': '2016-03-01 12:43', 'destination_date': '2016-03-01 12:43'})
         context = {'form': form}
         return render(request, 'trains_schedule/new_train.html', context)
 
@@ -82,19 +97,15 @@ def weeks_schedule(request):
     if request.method == 'POST':
         date_from = request.POST['date_from'] if request.POST['date_from'] else '1700-01-01 00:00'
         date_to = request.POST['date_to'] if request.POST['date_to']else '8000-01-01 23:59'
-        try:
-            date_check1 = datetime.datetime.strptime(date_from, '%Y-%m-%d %H:%M')
-            date_check2 = datetime.datetime.strptime(date_to, '%Y-%m-%d %H:%M')
-            if date_check1 > date_check2:
-                return HttpResponse("Error: date of arrival should be after date of departure")
-        except ValueError:
-            return HttpResponse("Error: you have to provide a valid date. "
-                            "Return to the previous page and change the date input.")
+
+        if check_time(date_from, date_to):
+                return check_time(date_from, date_to)
 
         schedule_list = Schedule.objects.filter(departure_date__gte=date_from,
-                                            departure_date__lte=date_to).order_by('departure_date')
+                                                departure_date__lte=date_to).order_by('departure_date')
 
-        context = {'schedule_list': schedule_list, 'date_from':request.POST['date_from'], 'date_to':request.POST['date_to']}
+        context = {'schedule_list': schedule_list, 'date_from': request.POST['date_from'],
+                   'date_to': request.POST['date_to']}
         if request.POST['city_from']:
             try:
                 city = City.objects.get(city_name=request.POST['city_from'])

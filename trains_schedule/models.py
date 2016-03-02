@@ -13,7 +13,7 @@ class City(models.Model):
         Используется на форме администратора для отображения количества маршрутов в/из города
         """
         return self.s_departure_city_name.count() + self.s_destination_city_name.count()
-    trip_count.short_description = 'Number of trips in/out of the city'
+    trip_count.short_description = 'Number of routes in/out of the city'
 
     def __unicode__(self):
         return u'{}'.format(self.city_name)
@@ -34,7 +34,7 @@ class Train(models.Model):
 
 class Schedule(models.Model):
     """
-    Задает модель таблицы для базы данных поездов
+    Задает модель таблицы для базы данных о маршрутах
     """
     departure_city = models.ForeignKey(City, related_name='s_departure_city_name')
     destination_city = models.ForeignKey(City, related_name='s_destination_city_name')
