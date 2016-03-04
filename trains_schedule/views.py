@@ -44,7 +44,7 @@ def detail(request, train_id):
     if request.method == 'POST':
 
         if request.POST['action'] == 'Delete':
-            response = 'Successful delete route {}'.format(route.display_name())
+            response = u'Successful delete route {}'.format(route.display_name())
             route.delete()
             return HttpResponse(response)
 
