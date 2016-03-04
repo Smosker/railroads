@@ -68,6 +68,7 @@ def detail(request, train_id):
                 return redirect('/schedule/train{}'.format(route.id))
             else:
                 return HttpResponse("Error: you enter incorrect value")
+
     else:
         context = {'train': route}
     return render(request, 'trains_schedule/detail.html', context)
