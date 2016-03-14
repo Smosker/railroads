@@ -2,6 +2,7 @@
 from django.shortcuts import render, get_object_or_404, redirect
 from django.http import HttpResponse
 from django.utils import timezone
+from django.contrib.auth.decorators import login_required
 import datetime
 from .forms import RouteCreation
 from .models import Schedule, City
@@ -73,7 +74,7 @@ def detail(request, train_id):
         context = {'train': route}
     return render(request, 'trains_schedule/detail.html', context)
 
-
+@login_required
 def new_train(request):
     """
     Отвечает за вывод форм для ввода пользовтелем информации по новому маршруту
@@ -104,7 +105,7 @@ def weeks_schedule(request):
     и вывода соответствующей информации
     """
     if request.method == 'POST':
-        date_from = request.POST['date_from'] if request.POST['date_from'] else '1700-01-01 00:00'
+        date_from = request.POST['date_from'] if request.POST['date_from'] else '2000-01-01 00:00'
         date_to = request.POST['date_to'] if request.POST['date_to']else '8000-01-01 23:59'
 
         if check_time(date_from, date_to):

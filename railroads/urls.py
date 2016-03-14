@@ -19,5 +19,7 @@ from . import views
 urlpatterns = [
     url(r'^schedule/', include('trains_schedule.urls')),
     url(r'^admin/', include(admin.site.urls)),
-    url(r'^$', views.main, name='main')
+    url(r'^$', views.main, name='main'),
+    url(r'^accounts/login/$', 'django.contrib.auth.views.login'),
+    url(r'^accounts/logout/$', 'django.contrib.auth.views.logout', {'next_page': '/'})
 ]

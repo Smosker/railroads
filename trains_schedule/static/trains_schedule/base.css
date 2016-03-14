@@ -29,11 +29,20 @@ h3  {
         font-size: 36pt;
         text-decoration: none;
     }
+.page-header h3 a, .page-header h3 a:visited, .page-header h3 a:active {
+        color: #ffffff;
+        font-size: 20pt;
+        float: right;
+        text-decoration: none;
+        margin-right: 20px;
+        margin-top: 20px;
+    }
 
 .top-menu, .top-menu:hover, .top-menu:visited {
         color: #ffffff;
         float: right;
         font-size: 36pt;
-        margin-right: 20px;
+        margin-right: 40px;
         margin-top: 20px;
     }
+
