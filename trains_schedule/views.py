@@ -6,6 +6,21 @@ from django.contrib.auth.decorators import login_required
 import datetime
 from .forms import RouteCreation
 from .models import Schedule, City
+from rest_framework import viewsets
+from rest_framework import generics
+from serializers import CitySerializer
+from rest_framework import mixins
+from rest_framework.decorators import api_view
+from rest_framework.response import Response
+from rest_framework import status
+
+class CityList(generics.ListCreateAPIView):
+    queryset = City.objects.all()
+    serializer_class = CitySerializer
+
+class CityDetail(generics.RetrieveUpdateDestroyAPIView):
+    queryset = City.objects.all()
+    serializer_class = CitySerializer
 
 
 def check_time(departure_date, arriving_date):
@@ -34,8 +49,8 @@ def index(request):
                                                    datetime.timedelta(days=7)).order_by('departure_date')
     context = {'latest_schedule_list': latest_schedule_list}
     return render(request, 'trains_schedule/index.html', context)
-
-
+from django.views.decorators.csrf import csrf_exempt
+@csrf_exempt
 def detail(request, train_id):
     """
     Отвечает за отображение информации по конкретному маршруту /shedule/train2/

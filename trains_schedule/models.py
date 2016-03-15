@@ -19,6 +19,8 @@ class City(models.Model):
         return u'{}'.format(self.city_name)
 
 
+
+
 class Train(models.Model):
     """
     Задает модель таблицы для базы данных поездов
