@@ -3,6 +3,7 @@ from django.shortcuts import render, get_object_or_404, redirect
 from django.http import HttpResponse
 from django.utils import timezone
 from django.contrib.auth.decorators import login_required
+from django.views.generic import ListView, DetailView, View
 import datetime
 from .forms import RouteCreation
 from .models import Schedule, City
@@ -25,29 +26,112 @@ def check_time(departure_date, arriving_date):
                                 "Return to the previous page and change the date input.")
 
 
-def index(request):
+class MainPage(View):
     """
     Отвечает за отображение информации на главной странице /shedule
     """
-    latest_schedule_list = Schedule.objects.filter(departure_date__gte=timezone.now(),
-                                                   departure_date__lte=timezone.now() +
-                                                   datetime.timedelta(days=7)).order_by('departure_date')
-    context = {'latest_schedule_list': latest_schedule_list}
-    return render(request, 'trains_schedule/index.html', context)
+    model = Schedule
+    template_name = 'trains_schedule/index.html'
+
+    def get(self, request):
+        time_now = timezone.now()
+        time_after_week = time_now + datetime.timedelta(days=7)
+        latest_schedule_list = self.model.objects.filter(departure_date__gte=time_now,
+                                                   departure_date__lte=time_after_week).order_by('departure_date')
+        context = {'latest_schedule_list': latest_schedule_list}
+        return render(request, self.template_name, context)
 
 
-def detail(request, train_id):
+class NewTrain(View):
     """
-    Отвечает за отображение информации по конкретному маршруту /shedule/train2/
-    Так же дает возможность изменить или удалить маршрут.
+    Отвечает за вывод форм для ввода пользовтелем информации по новому маршруту
+    на странице shedule/new-train/ при вводе корректной информации открывает
+    карточку созданного маршрута
     """
-    route = get_object_or_404(Schedule, pk=train_id)
-    if request.method == 'POST':
+    form_class = RouteCreation
+    template_name = 'trains_schedule/new_train.html'
+
+    def get(self,request):
+        form = self.form_class(initial={'departure_date': timezone.now().strftime('%Y-%m-%d %H:%M'),
+                                      'destination_date': timezone.now().strftime('%Y-%m-%d %H:%M')})
+        context = {'form': form}
+        return render(request, self.template_name, context)
+
+    def post(self, request):
+        form = self.form_class(request.POST)
+        if form.is_valid():
+            if check_time(request.POST['departure_date'], request.POST['destination_date']):
+                return check_time(request.POST['departure_date'], request.POST['destination_date'])
+
+            route = form.save()
+            return redirect('/schedule/trains/{}'.format(route.id))
+        else:
+            return HttpResponse("Error: you enter incorrect value")
+
+
+class WeeksSchedule(View):
+    """
+    Отвечает за вывод форм для ввода пользовтелем информации о интересуемых
+    датах маршрута и города(опционально) на странице shedule/weeks-schedule/
+    и вывода соответствующей информации
+    """
+    model = Schedule
+    city = City
+    template_name = 'trains_schedule/weeks_shedule.html'
+
+    def get(self, request):
+        time_now = timezone.now().strftime("%Y-%m-%d %H:%M")
+        context = {'time_now': time_now}
+        return render(request, self.template_name, context)
+
+    def post(self, request):
+        date_from = request.POST['date_from'] if request.POST['date_from'] else '2000-01-01 00:00'
+        date_to = request.POST['date_to'] if request.POST['date_to']else '8000-01-01 23:59'
+
+        if check_time(date_from, date_to):
+                return check_time(date_from, date_to)
+
+        schedule_list = self.model.objects.filter(departure_date__gte=date_from,
+                                                departure_date__lte=date_to).order_by('departure_date')
+
+        context = {'schedule_list': schedule_list, 'date_from': request.POST['date_from'],
+                   'date_to': request.POST['date_to']}
+
+        if request.POST['city_from']:
+            try:
+                city = self.city.objects.get(city_name=request.POST['city_from'])
+                schedule_list = schedule_list.filter(departure_city=city.id)
+            except City.DoesNotExist:
+                return HttpResponse("Error: you enter city name that is not in the base. "
+                                    "Return to the previous page and enter another one")
+
+            context['schedule_list'] = schedule_list
+            context['city_from'] = request.POST['city_from']
+        return render(request, self.template_name, context)
+
+
+class AllRoutes(View):
+    model = Schedule
+    form_class = RouteCreation
+    template_name = 'trains_schedule/all_routes.html'
+    context_object_name = 'schedule_list'
+
+    def get(self, request, train_id=None):
+        if train_id:
+            train = get_object_or_404(self.model, pk=train_id)
+            context = {'train': train}
+        else:
+            context = {'schedule_list': self.model.objects.all().order_by('departure_date')}
+        return render(request, self.template_name, context)
+
+    def post(self, request, train_id):
+        route = get_object_or_404(self.model, pk=train_id)
 
         if request.POST['action'] == 'Delete':
-            response = u'Successful delete route {}'.format(route.display_name())
-            route.delete()
-            return HttpResponse(response)
+            return self.delete(route)
+
+        elif request.POST['action'] == 'Save':
+            return self.put(request.POST, route)
 
         elif request.POST['action'] == 'Change':
             initial_data = {'departure_city': route.departure_city,
@@ -55,88 +139,27 @@ def detail(request, train_id):
                             'departure_date':  route.departure_date.strftime('%Y-%m-%d %H:%M'),
                             'destination_date': route.destination_date.strftime('%Y-%m-%d %H:%M'),
                             'train': route.train}
-
-            form = RouteCreation(initial=initial_data)
+            form = self.form_class(initial=initial_data)
             context = {'train': route, 'form': form}
 
-        elif request.POST['action'] == 'Save':
-            form = RouteCreation(request.POST, instance=route)
+            return render(request, self.template_name, context)
 
-            if form.is_valid():
-                if check_time(request.POST['departure_date'], request.POST['destination_date']):
-                    return check_time(request.POST['departure_date'], request.POST['destination_date'])
-                route = form.save()
-                return redirect('/schedule/train{}'.format(route.id))
-            else:
-                return HttpResponse("Error: you enter incorrect value")
+    def delete(self, route):
+        response = u'Successful delete route {}'.format(route.display_name())
+        route.delete()
+        return HttpResponse(response)
 
-    else:
-        context = {'train': route}
-    return render(request, 'trains_schedule/detail.html', context)
 
-@login_required
-def new_train(request):
-    """
-    Отвечает за вывод форм для ввода пользовтелем информации по новому маршруту
-    на странице shedule/new-train/ при вводе корректной информации открывает
-    карточку созданного маршрута
-    """
-    if request.method == 'POST':
-        form = RouteCreation(request.POST)
+    def put(self, data, route):
+        form = self.form_class(data, instance=route)
+        #добавить проверку на has_changed http://djbook.ru/rel1.9/ref/forms/api.html#django.forms.Form
         if form.is_valid():
-            if check_time(request.POST['departure_date'], request.POST['destination_date']):
-                return check_time(request.POST['departure_date'], request.POST['destination_date'])
+            if check_time(data['departure_date'], data['destination_date']):
+                return check_time(data['departure_date'], data['destination_date'])
             route = form.save()
-            return redirect('/schedule/train{}'.format(route.id))
+            return redirect('/schedule/trains/{}'.format(route.id))
         else:
             return HttpResponse("Error: you enter incorrect value")
 
-    else:
-        form = RouteCreation(initial={'departure_date': timezone.now().strftime('%Y-%m-%d %H:%M'),
-                                      'destination_date': timezone.now().strftime('%Y-%m-%d %H:%M')})
-        context = {'form': form}
-        return render(request, 'trains_schedule/new_train.html', context)
 
 
-def weeks_schedule(request):
-    """
-    Отвечает за вывод форм для ввода пользовтелем информации о интересуемых
-    датах маршрута и города(опционально) на странице shedule/weeks-schedule/
-    и вывода соответствующей информации
-    """
-    if request.method == 'POST':
-        date_from = request.POST['date_from'] if request.POST['date_from'] else '2000-01-01 00:00'
-        date_to = request.POST['date_to'] if request.POST['date_to']else '8000-01-01 23:59'
-
-        if check_time(date_from, date_to):
-                return check_time(date_from, date_to)
-
-        schedule_list = Schedule.objects.filter(departure_date__gte=date_from,
-                                                departure_date__lte=date_to).order_by('departure_date')
-
-        context = {'schedule_list': schedule_list, 'date_from': request.POST['date_from'],
-                   'date_to': request.POST['date_to']}
-        if request.POST['city_from']:
-            try:
-                city = City.objects.get(city_name=request.POST['city_from'])
-                schedule_list = schedule_list.filter(departure_city=city.id)
-            except City.DoesNotExist:
-                return HttpResponse("Error: you enter city name that is not in the base. "
-                                    "Return to the previous page and enter another one")
-            context['schedule_list'] = schedule_list
-            context['city_from'] = request.POST['city_from']
-
-    else:
-        time_now = timezone.now().strftime("%Y-%m-%d %H:%M")
-        context = {'time_now': time_now}
-    return render(request, 'trains_schedule/weeks_shedule.html', context)
-
-
-def all_route(request):
-    """
-    Отвечает за вывод информации о всех маршрутах на странице schedule/all-route/
-    Маршруты выводятся отсортированные по даты отправления
-    """
-    schedule_list = Schedule.objects.all().order_by('departure_date')
-    context = {'schedule_list': schedule_list}
-    return render(request, 'trains_schedule/schedule_all.html', context)

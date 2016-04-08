@@ -23,7 +23,7 @@
     {% if schedule_list %}
         <ul>
         {% for train_route in schedule_list %}
-            <li><a href="{% url 'detail' train_route.id %}">{{ train_route.display_name }}</a></li>
+            <li><a href="{% url 'trains' train_route.id %}">{{ train_route.display_name }}</a></li>
         {% endfor %}
         </ul>
     {% else %}
