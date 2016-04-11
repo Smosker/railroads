@@ -1,0 +1,59 @@
+{% extends 'trains_schedule/base.html' %}
+{% block content %}
+
+{% if schedule_list %}
+<h3>{{ "List of all train routes" }}</h3>
+    <ul>
+    {% for train_route in schedule_list %}
+        <li><a href="{% url 'trains' train_route.id %}">{{ train_route.display_name }}</a></li>
+    {% endfor %}
+    </ul>
+{% else %}
+    <p></p>
+{% endif %}
+
+{% if train %}
+<h1>{{ train.train }}</h1>
+<h3>{{ "Route info" }}</h3>
+
+<div class="text_style">
+    {{ train.display_train }}
+</div>
+
+<h3>{{ "Train info" }}</h3>
+
+<div class="text_style">
+    {{train.display_train_info}}
+</div>
+
+<br>
+
+{% if user.is_authenticated %}
+<form  method="post">
+    {% csrf_token %}
+    <input id="action_id" type="hidden" name="action" value="Delete">
+    <input type="submit" value="Delete" />
+</form>
+
+<form method="post">
+    {% csrf_token %}
+    <input id="action_id" type="hidden" name="action" value="Change">
+    <input type="submit" value="Change data" />
+</form>
+
+<form  method="post">
+    {% csrf_token %}
+    {{ form.as_ul}}
+    <input id="action_id" type="hidden" name="action" value="Save">
+    <input type="submit" value="Save changes" />
+</form>
+
+        {% endif %}
+{% else %}
+    <p></p>
+{% endif %}
+
+
+
+
+{% endblock content %}

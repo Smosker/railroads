@@ -19,3 +19,6 @@ class TimeCheckTests(TestCase):
         arriving = '2015-01-02 13:12'
         response = HttpResponse("Error: date of arrival should be after date of departure")
         self.assertEqual(str(check_time(departure, arriving)), str(response))
+
+        departure = arriving
+        self.assertEqual(str(check_time(departure, arriving)), str(response))

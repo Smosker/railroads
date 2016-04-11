@@ -3,7 +3,8 @@ from django.shortcuts import render, get_object_or_404, redirect
 from django.http import HttpResponse
 from django.utils import timezone
 from django.contrib.auth.decorators import login_required
-from django.views.generic import ListView, DetailView, View
+from django.utils.decorators import method_decorator
+from django.views.generic import View
 import datetime
 from .forms import RouteCreation
 from .models import Schedule, City
@@ -12,14 +13,12 @@ from .models import Schedule, City
 def check_time(departure_date, arriving_date):
     """
     Функция для проверки корректности ввода даты и времени
-    Используется в views.detail при изменении маршрута и
-    в views.new_train при создании маршрута
-    По заложенной функциональности дата отправления не должна быть больше даты прибытия
+    Используется в views.WeeksSchedule
     """
     try:
         date_check1 = datetime.datetime.strptime(departure_date, '%Y-%m-%d %H:%M')
         date_check2 = datetime.datetime.strptime(arriving_date, '%Y-%m-%d %H:%M')
-        if date_check1 > date_check2:
+        if date_check1 >= date_check2:
                 return HttpResponse("Error: date of arrival should be after date of departure")
     except ValueError:
             return HttpResponse("Error: you have to provide a valid date. "
@@ -37,7 +36,7 @@ class MainPage(View):
         time_now = timezone.now()
         time_after_week = time_now + datetime.timedelta(days=7)
         latest_schedule_list = self.model.objects.filter(departure_date__gte=time_now,
-                                                   departure_date__lte=time_after_week).order_by('departure_date')
+                                                         departure_date__lte=time_after_week).order_by('departure_date')
         context = {'latest_schedule_list': latest_schedule_list}
         return render(request, self.template_name, context)
 
@@ -51,22 +50,20 @@ class NewTrain(View):
     form_class = RouteCreation
     template_name = 'trains_schedule/new_train.html'
 
-    def get(self,request):
+    @method_decorator(login_required)
+    def get(self, request):
         form = self.form_class(initial={'departure_date': timezone.now().strftime('%Y-%m-%d %H:%M'),
-                                      'destination_date': timezone.now().strftime('%Y-%m-%d %H:%M')})
+                                        'destination_date': timezone.now().strftime('%Y-%m-%d %H:%M')})
         context = {'form': form}
         return render(request, self.template_name, context)
-
+    
     def post(self, request):
         form = self.form_class(request.POST)
         if form.is_valid():
-            if check_time(request.POST['departure_date'], request.POST['destination_date']):
-                return check_time(request.POST['departure_date'], request.POST['destination_date'])
-
             route = form.save()
             return redirect('/schedule/trains/{}'.format(route.id))
         else:
-            return HttpResponse("Error: you enter incorrect value")
+            return HttpResponse("Error: you enter incorrect value. {}".format(form.errors))
 
 
 class WeeksSchedule(View):
@@ -88,11 +85,12 @@ class WeeksSchedule(View):
         date_from = request.POST['date_from'] if request.POST['date_from'] else '2000-01-01 00:00'
         date_to = request.POST['date_to'] if request.POST['date_to']else '8000-01-01 23:59'
 
-        if check_time(date_from, date_to):
-                return check_time(date_from, date_to)
+        check = check_time(date_from, date_to)
+        if check:
+            return check
 
         schedule_list = self.model.objects.filter(departure_date__gte=date_from,
-                                                departure_date__lte=date_to).order_by('departure_date')
+                                                  departure_date__lte=date_to).order_by('departure_date')
 
         context = {'schedule_list': schedule_list, 'date_from': request.POST['date_from'],
                    'date_to': request.POST['date_to']}
@@ -111,6 +109,12 @@ class WeeksSchedule(View):
 
 
 class AllRoutes(View):
+    """
+    Класс отвечающий за вывод информации о маршрутах,
+    /schedule/trains/ - все маршруты
+    /schedule/trains/19 - информация по конкретному маршруту
+    Так же обрабатывает запросы на изменение/удаление маршрута
+    """
     model = Schedule
     form_class = RouteCreation
     template_name = 'trains_schedule/all_routes.html'
@@ -131,7 +135,15 @@ class AllRoutes(View):
             return self.delete(route)
 
         elif request.POST['action'] == 'Save':
-            return self.put(request.POST, route)
+            form = self.form_class(request.POST, instance=route)
+            if form.has_changed():
+                if form.is_valid():
+                    route = form.save()
+                    return redirect('/schedule/trains/{}'.format(route.id))
+                else:
+                    return HttpResponse("Error: you enter incorrect value {}".format(form.errors))
+            else:
+                return HttpResponse("Error: you hadn't change anything")
 
         elif request.POST['action'] == 'Change':
             initial_data = {'departure_city': route.departure_city,
@@ -145,21 +157,14 @@ class AllRoutes(View):
             return render(request, self.template_name, context)
 
     def delete(self, route):
+        """
+        Отвечает за удаление переданного маршрута
+        """
         response = u'Successful delete route {}'.format(route.display_name())
         route.delete()
         return HttpResponse(response)
 
 
-    def put(self, data, route):
-        form = self.form_class(data, instance=route)
-        #добавить проверку на has_changed http://djbook.ru/rel1.9/ref/forms/api.html#django.forms.Form
-        if form.is_valid():
-            if check_time(data['departure_date'], data['destination_date']):
-                return check_time(data['departure_date'], data['destination_date'])
-            route = form.save()
-            return redirect('/schedule/trains/{}'.format(route.id))
-        else:
-            return HttpResponse("Error: you enter incorrect value")
 
 
 
