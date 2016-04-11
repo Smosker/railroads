@@ -55,7 +55,8 @@ class Schedule(models.Model):
                                                 self.destination_city, self.destination_date.strftime("%Y-%m-%d %H:%M"))
 
     def display_train_info(self):
-        return u'Model: {}, Type: {}, Description: {}, Capacity: {}'.format(self.train.train_model,
-                                                                            self.train.train_type,
-                                                                            self.train.train_type_description,
-                                                                            self.train.train_capacity)
+        train = self.train
+        return u'Model: {}, Type: {}, Description: {}, Capacity: {}'.format(train.train_model,
+                                                                            train.train_type,
+                                                                            train.train_type_description,
+                                                                            train.train_capacity)
