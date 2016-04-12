@@ -56,7 +56,7 @@ class NewTrain(View):
                                         'destination_date': timezone.now().strftime('%Y-%m-%d %H:%M')})
         context = {'form': form}
         return render(request, self.template_name, context)
-    
+
     def post(self, request):
         form = self.form_class(request.POST)
         if form.is_valid():

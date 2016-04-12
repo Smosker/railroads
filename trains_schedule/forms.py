@@ -22,14 +22,7 @@ class RouteCreation(forms.ModelForm):
         departure = cleaned_data.get('departure_date')
         destination = cleaned_data.get('destination_date')
 
-        if not (departure and destination):
-            """
-            Проверка на корректность введенной даты - если преобразование в дату не удалось - одно из
-            значений будет None
-            """
-            raise forms.ValidationError("Error: you have to provide a valid date. ")
-
-        if departure > destination:
+        if departure and destination and departure > destination:
                 raise forms.ValidationError("Error: date of arrival should be after date of departure")
 
         return cleaned_data
