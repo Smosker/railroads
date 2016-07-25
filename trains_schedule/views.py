@@ -30,7 +30,7 @@ class MainPage(View):
     Отвечает за отображение информации на главной странице /shedule
     """
     model = Schedule
-    template_name = 'trains_schedule/index.html'
+    template_name = 'trains_schedule/schedule.html'
 
     def get(self, request):
         time_now = timezone.now()
@@ -117,7 +117,7 @@ class AllRoutes(View):
     """
     model = Schedule
     form_class = RouteCreation
-    template_name = 'trains_schedule/all_routes.html'
+    template_name = 'trains_schedule/trains.html'
     context_object_name = 'schedule_list'
 
     def get(self, request, train_id=None):
