@@ -7,7 +7,7 @@ from django.utils.decorators import method_decorator
 from django.views.generic import View
 import datetime
 from .forms import RouteCreation
-from .models import Schedule, City
+from .models import Schedule, City, Train
 
 
 def check_time(departure_date, arriving_date):
@@ -30,6 +30,7 @@ class MainPage(View):
     Отвечает за отображение информации на главной странице /shedule
     """
     model = Schedule
+    train = Train
     template_name = 'trains_schedule/schedule.html'
 
     def get(self, request):
@@ -39,6 +40,16 @@ class MainPage(View):
                                                          departure_date__lte=time_after_week).order_by('departure_date')
         context = {'latest_schedule_list': latest_schedule_list}
         return render(request, self.template_name, context)
+
+    def post(self,request):
+        if request.POST['search_value']:
+            train = self.train.objects.filter(train_model__contains=request.POST['search_value'])
+            print(train)
+            search_train_list = self.model.objects.filter(train__in=[i.id for i in train])
+            context = {'search_train_list': search_train_list}
+            return render(request, self.template_name, context)
+        else:
+            return MainPage.get(self,request)
 
 
 class NewTrain(View):
