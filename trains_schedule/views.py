@@ -43,9 +43,9 @@ class MainPage(View):
 
     def post(self,request):
         if request.POST['search_value']:
-            train = self.train.objects.filter(train_model__contains=request.POST['search_value'])
-            print(train)
-            search_train_list = self.model.objects.filter(train__in=[i.id for i in train])
+            trains = [route.id for route in self.model.objects.all()
+                      if request.POST['search_value'].lower() in route.display_name().lower()]
+            search_train_list = self.model.objects.filter(pk__in=trains)
             context = {'search_train_list': search_train_list}
             return render(request, self.template_name, context)
         else:
