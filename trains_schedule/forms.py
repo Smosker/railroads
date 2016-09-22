@@ -1,6 +1,6 @@
 # coding=utf-8
 from django import forms
-from .models import Schedule
+from trains_schedule.models import Schedule
 
 
 class RouteCreation(forms.ModelForm):

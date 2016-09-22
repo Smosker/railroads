@@ -5,7 +5,7 @@
 
     <a href="{% url 'trains' %}">List of all train routes</a>
 
-    <form method="post">
+    <form method="get">
     {% csrf_token %}
     <label for="search_value">Search trains by name: </label>
     <input id="search_value" type="text" name="search_value">

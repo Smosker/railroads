@@ -6,8 +6,9 @@ from django.contrib.auth.decorators import login_required
 from django.utils.decorators import method_decorator
 from django.views.generic import View
 import datetime
-from .forms import RouteCreation
-from .models import Schedule, City, Train
+from trains_schedule.forms import RouteCreation
+from trains_schedule.models import Schedule,City,Train
+
 
 
 def check_time(departure_date, arriving_date):
@@ -39,10 +40,15 @@ class MainPage(View):
         latest_schedule_list = self.model.objects.filter(departure_date__gte=time_now,
                                                          departure_date__lte=time_after_week).order_by('departure_date')
         context = {'latest_schedule_list': latest_schedule_list}
+        if request.GET.get('search_value',None):
+            trains = [route.id for route in self.model.objects.all()
+                      if request.GET.get('search_value','').lower() in route.display_name().lower()]
+            search_train_list = self.model.objects.filter(pk__in=trains)
+            context['search_train_list'] = search_train_list
         return render(request, self.template_name, context)
-
+'''
     def post(self,request):
-        if request.POST['search_value']:
+        if request.GET['search_value']:
             trains = [route.id for route in self.model.objects.all()
                       if request.POST['search_value'].lower() in route.display_name().lower()]
             search_train_list = self.model.objects.filter(pk__in=trains)
@@ -51,7 +57,7 @@ class MainPage(View):
         else:
             return MainPage.get(self,request)
 
-
+'''
 class NewTrain(View):
     """
     Отвечает за вывод форм для ввода пользовтелем информации по новому маршруту

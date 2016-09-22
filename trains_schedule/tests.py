@@ -5,8 +5,9 @@ from django.contrib.auth.models import User
 from django.core.urlresolvers import reverse
 from django.test.client import Client
 from django.utils import timezone
-from .views import check_time
-from .models import Schedule, City,Train
+from trains_schedule.views import check_time
+from trains_schedule.models import Schedule,City,Train
+
 
 
 # Create your tests here.
@@ -43,6 +44,7 @@ class NewRouteTests(TestCase):
                            train_type_description='test', train_capacity=20)
         self.train.save()
 
+
     def test_access(self):
         """
         Проверка на доступность без залогиневания
@@ -63,6 +65,7 @@ class NewRouteTests(TestCase):
                 u'destination_city': [u'1'], u'train': [u'1'], u'departure_city': [u'1']}
 
         self.client.post(reverse('new_train'), data)
+        print(Schedule.objects.all())
         self.assertEqual(len(Schedule.objects.all()), 1)
 
         data_wrong_date = {u'departure_date': [u'2016-04-15 15:06'], u'destination_date': [u'2016-04-11 15:06'],
@@ -95,6 +98,7 @@ class AllRouteTests(TestCase):
         self.route = Schedule(departure_date=timezone.now(), destination_date=timezone.now(),
                               destination_city=self.city, train=self.train, departure_city=self.city)
         self.route.save()
+
 
     def test_change(self):
         """
